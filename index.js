@@ -74,34 +74,52 @@ async function run() {
       res.send(users);
     });
 
+    // app.get("/users/admin/:email", async (req, res) => {
+    //   const email = req.params.email;
+    //   const query = { email };
+    //   const user = await usersCollection.findOne(query);
+    //   res.send({ isAdmin: user?.role === "admin" });
+    // });
+
+    //Admin Role
     app.get("/users/admin/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const user = await usersCollection.findOne(query);
       res.send({ isAdmin: user?.role === "admin" });
     });
+
+    //Seller Role
+    app.get("/users/seller/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      res.send({ isSeller: user?.role === "seller" });
+    });
+
+    // All seller
+    app.get('/sellers', async (req,res)=>{
+      const query = {
+        role: 'seller'
+      }
+      const selers = await usersCollection.find(query).toArray();
+      res.send(selers)
+    })
+
+    // All Buyers
+    app.get('/buyers', async (req,res)=>{
+      const query = {
+        role: 'buyer'
+      }
+      const buyers = await usersCollection.find(query).toArray();
+      res.send(buyers)
+    })
 
     // add users
     app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await usersCollection.insertOne(user);
       res.send(result);
-    });
-
-    //get admin user
-    app.get("/users/admin/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const user = await usersCollection.findOne(query);
-      res.send({ isAdmin: user?.role === "admin" });
-    });
-
-    //get seller user
-    app.get("/users/seller/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const user = await usersCollection.findOne(query);
-      res.send({ isSeller: user?.role === "seller" });
     });
 
     // get products
@@ -113,7 +131,7 @@ async function run() {
 
     app.get("/my-products/seller/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { email };
+      const query = {sellerEmail: email };
       const products = await productsCollection.find(query).toArray();
       res.send(products);
     });
