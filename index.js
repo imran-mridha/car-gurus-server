@@ -7,6 +7,8 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 app.use(cors());
 app.use(express.json());
 
@@ -38,6 +40,8 @@ async function run() {
     const categoryCollection = client.db("carGurus").collection("categories");
     const usersCollection = client.db("carGurus").collection("users");
     const productsCollection = client.db("carGurus").collection("products");
+    const bookingsCollection = client.db("carGurus").collection("bookings");
+    const paymentsCollection = client.db("carGurus").collection("payments");
 
     // Get JWT Token
     app.get("/jwt", async (req, res) => {
@@ -62,7 +66,7 @@ async function run() {
 
     app.get("/categories/:name", async (req, res) => {
       const name = req.params.name;
-      const query = {name};
+      const query = { name };
       const products = await productsCollection.find(query).toArray();
       res.send(products);
     });
@@ -161,18 +165,20 @@ async function run() {
     // get products
     app.get("/products/:categoryId", async (req, res) => {
       const catId = req.params.categoryId;
-      const query = {categoryId: catId};
+      const query = { categoryId: catId };
       const products = await productsCollection.find(query).toArray();
-      res.send(products)
+      res.send(products);
     });
 
     // Add products
     app.post("/products", async (req, res) => {
       const product = req.body;
-      const categoryFilter = await categoryCollection.findOne({_id: ObjectId(product.categoryId)})
-      const filteredCatName = categoryFilter.name
-      product.categoryName = filteredCatName
-      const addProducts = await productsCollection.insertOne(product)
+      const categoryFilter = await categoryCollection.findOne({
+        _id: ObjectId(product.categoryId),
+      });
+      const filteredCatName = categoryFilter.name;
+      product.categoryName = filteredCatName;
+      const addProducts = await productsCollection.insertOne(product);
       res.send(addProducts);
     });
 
@@ -183,7 +189,65 @@ async function run() {
       res.send(result);
     });
 
+    // get my bookings data
+    app.get("/bookings", async (req, res) => {
+      const email = req.query.email;
+      // const decodedEmail = req.decoded.email;
 
+      // if (email !== decodedEmail) {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
+
+      const query = { email: email };
+      const bookings = await bookingsCollection.find(query).toArray();
+      res.send(bookings);
+    });
+    // Post Booking Data
+    app.post("/bookings", async (req, res) => {
+      const bookings = req.body;
+      const result = await bookingsCollection.insertOne(bookings);
+      res.send(result);
+    });
+    app.get("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const booking = await bookingsCollection.findOne(query);
+      res.send(booking);
+    });
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const booking = req.body;
+      const price = booking.price;
+      const ammount = price * 100;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: "usd",
+        amount: ammount,
+        payment_method_types: ["card"],
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
+    // post payment data
+    app.post("/payments", async (req, res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.bookingId;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          paid: "text",
+          tranjectionId: payment.tranjectionId,
+        },
+      };
+      const updatedResult = await bookingsCollection.updateOne(
+        filter,
+        updatedDoc
+      );
+      res.send(result);
+    });
   } finally {
   }
 }
