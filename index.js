@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 const app = express();
@@ -46,7 +46,7 @@ async function run() {
       const user = await usersCollection.findOne(query);
       if (user) {
         const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-          expiresIn: "1h",
+          expiresIn: "7d",
         });
         return res.send({ accessToken: token });
       }
@@ -60,11 +60,11 @@ async function run() {
       res.send(categories);
     });
 
-    app.get("/categories/:id", async (req, res) => {
-      // const id =
-      const query = {};
-      const categories = await categoryCollection.find(query).toArray();
-      res.send(categories);
+    app.get("/categories/:name", async (req, res) => {
+      const name = req.params.name;
+      const query = {name};
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
     });
 
     // get all users
@@ -98,22 +98,38 @@ async function run() {
     });
 
     // All seller
-    app.get('/sellers', async (req,res)=>{
+    app.get("/sellers", async (req, res) => {
       const query = {
-        role: 'seller'
-      }
+        role: "seller",
+      };
       const selers = await usersCollection.find(query).toArray();
-      res.send(selers)
-    })
+      res.send(selers);
+    });
 
     // All Buyers
-    app.get('/buyers', async (req,res)=>{
+    app.get("/buyers", async (req, res) => {
       const query = {
-        role: 'buyer'
-      }
+        role: "buyer",
+      };
       const buyers = await usersCollection.find(query).toArray();
-      res.send(buyers)
-    })
+      res.send(buyers);
+    });
+
+    // Delete Buyer
+    app.delete("/buyers/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await usersCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    // Delete Seller
+    app.delete("/sellers/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await usersCollection.deleteOne(filter);
+      res.send(result);
+    });
 
     // add users
     app.post("/users", async (req, res) => {
@@ -129,19 +145,45 @@ async function run() {
       res.send(products);
     });
 
-    app.get("/my-products/seller/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = {sellerEmail: email };
+    app.get("/products", async (req, res) => {
+      const query = {};
       const products = await productsCollection.find(query).toArray();
       res.send(products);
+    });
+
+    app.get("/my-products/seller/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { sellerEmail: email };
+      const products = await productsCollection.find(query).toArray();
+      res.send(products);
+    });
+
+    // get products
+    app.get("/products/:categoryId", async (req, res) => {
+      const catId = req.params.categoryId;
+      const query = {categoryId: catId};
+      const products = await productsCollection.find(query).toArray();
+      res.send(products)
     });
 
     // Add products
     app.post("/products", async (req, res) => {
       const product = req.body;
-      const result = await productsCollection.insertOne(product);
+      const categoryFilter = await categoryCollection.findOne({_id: ObjectId(product.categoryId)})
+      const filteredCatName = categoryFilter.name
+      product.categoryName = filteredCatName
+      const addProducts = await productsCollection.insertOne(product)
+      res.send(addProducts);
+    });
+
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await productsCollection.deleteOne(filter);
       res.send(result);
     });
+
+
   } finally {
   }
 }
