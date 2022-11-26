@@ -42,6 +42,7 @@ async function run() {
     const productsCollection = client.db("carGurus").collection("products");
     const bookingsCollection = client.db("carGurus").collection("bookings");
     const paymentsCollection = client.db("carGurus").collection("payments");
+    const reportingsCollection = client.db("carGurus").collection("reportings");
 
     // Get JWT Token
     app.get("/jwt", async (req, res) => {
@@ -149,11 +150,6 @@ async function run() {
       res.send(products);
     });
 
-    app.get("/products", async (req, res) => {
-      const query = {};
-      const products = await productsCollection.find(query).toArray();
-      res.send(products);
-    });
 
     app.get("/my-products/seller/:email", async (req, res) => {
       const email = req.params.email;
@@ -204,10 +200,72 @@ async function run() {
     });
     // Post Booking Data
     app.post("/bookings", async (req, res) => {
-      const bookings = req.body;
-      const result = await bookingsCollection.insertOne(bookings);
+      const booking = req.body;
+      // console.log(booking);
+      const query = {
+        // appoinmentDate: booking.appoinmentDate,
+        name: booking.name,
+        email: booking.email,
+      };
+      const alreadyBooked = await bookingsCollection.find(query).toArray();
+
+      if (alreadyBooked.length) {
+        const message = `You already booked ${booking.name}.`;
+        return res.send({ acknowledged: false, message });
+      }
+      const result = await bookingsCollection.insertOne(booking);
       res.send(result);
     });
+
+    // get reporting data
+    app.get("/reporting", async (req, res) => {
+      // const email = req.query.email;
+      // const decodedEmail = req.decoded.email;
+
+      // if (email !== decodedEmail) {
+      //   return res.status(403).send({ message: "forbidden access" });
+      // }
+
+      const query = {};
+      const report = await reportingsCollection.find(query).toArray();
+      res.send(report);
+    });
+
+    app.delete("/reporting/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const filter = { _id: ObjectId(id) };
+      const findReportProduct = await reportingsCollection.findOne(filter);
+      const productId = findReportProduct.productId;
+      const findProduct = await productsCollection.findOne({_id: ObjectId(productId)})
+      const result1 = await reportingsCollection.deleteOne(findReportProduct)
+      const result2 = await productsCollection.deleteOne(findProduct)
+
+      res.send(result1);
+    });
+
+    // Post Reporting Data
+    app.post("/reporting", async (req, res) => {
+      const report = req.body;
+      // console.log(booking);
+      const query = {
+        // appoinmentDate: booking.appoinmentDate,
+        name: report.name,
+        email: report.email,
+      };
+      const alreadyReport = await reportingsCollection.find(query).toArray();
+
+      if (alreadyReport.length) {
+        const message = `You already Reported ${report.name}.`;
+        return res.send({ acknowledged: false, message });
+      }
+      const result = await reportingsCollection.insertOne(report);
+      res.send(result);
+    });
+
+    
+
+
     app.get("/bookings/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -235,19 +293,52 @@ async function run() {
       const payment = req.body;
       const result = await paymentsCollection.insertOne(payment);
       const id = payment.bookingId;
+      const id2 = payment.productId;
+
       const filter = { _id: ObjectId(id) };
+      const filter2 = { _id: ObjectId(id2) };
       const updatedDoc = {
         $set: {
-          paid: "text",
+          paid: true,
           tranjectionId: payment.tranjectionId,
+        },
+      };
+      const updatedDoc2 = {
+        $set: {
+          status: "sold",
+          
         },
       };
       const updatedResult = await bookingsCollection.updateOne(
         filter,
         updatedDoc
       );
+      const updatedResult2 = await productsCollection.updateOne(
+        filter2,
+        updatedDoc2
+      );
       res.send(result);
     });
+
+    // mae advertise
+    app.put('/makeAdvertise/:id', async(req, res)=>{
+      const id = req.params.id;
+      console.log(id);
+      const filter = {
+        _id: ObjectId(id)
+      }
+      const options = {upsert: true};
+      const updateDoc = {
+        $set: {
+          isAdvertise: true
+        }
+      };
+      const result = await productsCollection.updateOne(filter,updateDoc,options)
+      res.send(result)
+    })
+
+
+
   } finally {
   }
 }
