@@ -65,9 +65,9 @@ async function run() {
       res.send(categories);
     });
 
-    app.get("/categories/:name", async (req, res) => {
-      const name = req.params.name;
-      const query = { name };
+    app.get("/categories/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { id };
       const products = await productsCollection.find(query).toArray();
       res.send(products);
     });
@@ -169,14 +169,43 @@ async function run() {
 
     // Add products
     app.post("/products", async (req, res) => {
-      const product = req.body;
-      const categoryFilter = await categoryCollection.findOne({
-        _id: ObjectId(product.categoryId),
-      });
-      const filteredCatName = categoryFilter.name;
-      product.categoryName = filteredCatName;
-      const addProducts = await productsCollection.insertOne(product);
-      res.send(addProducts);
+
+      let product = req.body;
+      const categoryQuery = {
+        _id: ObjectId(product.categoryId)
+      }
+
+      const categories = await categoryCollection.findOne(categoryQuery);
+      const catName = categories.name;
+
+      product.categoryName = catName;
+
+      const userQuery = {
+        email: product.sellerEmail
+      }
+
+      const user = await usersCollection.findOne(userQuery)
+      const isVerified = user.verified;
+
+      if(isVerified === 'true'){
+        product.verified = 'true'
+      }
+
+      const result = await productsCollection.insertOne(product);
+      res.send(result)
+
+
+
+
+
+      // const product = req.body;
+      // const categoryFilter = await categoryCollection.findOne({
+      //   _id: ObjectId(product.categoryId),
+      // });
+      // const filteredCatName = categoryFilter.name;
+      // product.categoryName = filteredCatName;
+      // const addProducts = await productsCollection.insertOne(product);
+      // res.send(addProducts);
     });
 
     app.delete("/products/:id", async (req, res) => {
@@ -352,13 +381,18 @@ async function run() {
         email: email
       }
       const options = {upsert : true}
+
       const updateDoc = {
         $set: {
           verified: 'true'
         }
       }
 
-      const set = await productsCollection.updateMany(filter,updateDoc,options)
+      const productHave = await productsCollection.find(filter).toArray()
+
+      if(productHave.length){
+        const set = await productsCollection.updateMany(filter,updateDoc,options)
+      }
 
       const result = await usersCollection.updateOne(filter2, updateDoc,options)
 
