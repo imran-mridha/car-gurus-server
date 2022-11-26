@@ -102,6 +102,7 @@ async function run() {
       res.send({ isSeller: user?.role === "seller" });
     });
 
+
     // All seller
     app.get("/sellers", async (req, res) => {
       const query = {
@@ -299,7 +300,7 @@ async function run() {
       const filter2 = { _id: ObjectId(id2) };
       const updatedDoc = {
         $set: {
-          paid: true,
+          paid: 'true',
           tranjectionId: payment.tranjectionId,
         },
       };
@@ -330,10 +331,45 @@ async function run() {
       const options = {upsert: true};
       const updateDoc = {
         $set: {
-          isAdvertise: true
+          isAdvertise: 'true'
         }
       };
       const result = await productsCollection.updateOne(filter,updateDoc,options)
+      res.send(result)
+    })
+
+    // Verify seller
+
+    app.put('/sellers/verified/:email', async(req,res)=>{
+
+      const email = req.params.email;
+
+      const filter = {
+
+        sellerEmail: email
+      }
+      const filter2 = {
+        email: email
+      }
+      const options = {upsert : true}
+      const updateDoc = {
+        $set: {
+          verified: 'true'
+        }
+      }
+
+      const set = await productsCollection.updateMany(filter,updateDoc,options)
+
+      const result = await usersCollection.updateOne(filter2, updateDoc,options)
+
+      res.send(result);
+    })
+
+    app.get('/advertiseItems', async(req,res)=>{
+      const query = {
+        isAdvertise: 'true'
+      }
+      const result = await productsCollection.find(query).toArray()
       res.send(result)
     })
 
