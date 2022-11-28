@@ -181,7 +181,7 @@ async function run() {
 //// All Product Api
 
     // get products
-    app.get("/products", async (req, res) => {
+    app.get("/products",verifyJWT, async (req, res) => {
       const query = {};
       const products = await productsCollection.find(query).toArray();
       const soldProduct = products.filter(product => product.status === "sold")
