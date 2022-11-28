@@ -18,6 +18,7 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
 // Verify JWT
 function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -272,6 +273,7 @@ async function run() {
       const result = await bookingsCollection.insertOne(booking);
       res.send(result);
     });
+
     // Get booking with id
     app.get("/bookings/:id",verifyJWT,verifyBuyer, async (req, res) => {
       const id = req.params.id;
@@ -448,7 +450,7 @@ async function run() {
 run().catch((error) => console.log(error));
 
 app.get("/", async (req, res) => {
-  res.send("Car Gurus server running....");
+  res.send("Wellcome To Car Gurus Sever!!!");
 });
 
 app.listen(port, () => {
